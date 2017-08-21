@@ -1,0 +1,25 @@
+opam-version: "1.2"
+name: "okafka"
+version: "1.0.0"
+maintainer: "alin.popa@gmail.com"
+authors: ["Alin Popa"]
+homepage: "https://github.com/alinpopa/okafka"
+bug-reports: "https://github.com/alinpopa/okafka/issues"
+dev-repo: "https://github.com/alinpopa/okafka.git"
+license: "LGPL-3 with OCaml linking exception"
+available: [
+  ocaml-version >= "4.04.0"
+]
+build: [
+  ["jbuilder" "build" "--only" "okafka" "--root" "." "-j" jobs "@install"]
+]
+depends: [
+  "jbuilder" {build & >= "1.0+beta10"}
+  "core"
+  "lwt"
+  "conduit"
+  "conduit-lwt-unix"
+]
+descr: "
+Pure OCaml implementation of Kafka client
+"

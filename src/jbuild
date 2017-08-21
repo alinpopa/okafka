@@ -1,0 +1,5 @@
+(library
+  ((name okafka)
+   (public_name okafka)
+   (flags (:standard -warn-error A))
+   (libraries (core lwt conduit conduit-lwt-unix))))

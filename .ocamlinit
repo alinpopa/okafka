@@ -1,0 +1,6 @@
+#require "okafka";;
+
+let () =
+  Filename.concat (Sys.getenv "HOME") ".ocamlinit" |> Topdirs.dir_use Format.std_formatter;;
+
+open Okafka;;
