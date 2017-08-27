@@ -16,6 +16,7 @@ build: [
 depends: [
   "jbuilder" {build & >= "1.0+beta10"}
   "core"
+  "stdint"
   "lwt"
   "conduit"
   "conduit-lwt-unix"
