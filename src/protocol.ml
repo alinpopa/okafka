@@ -61,37 +61,35 @@ let to_partition_data partition_data =
       message_set]
   ) partition_data
 
+let request_header api_key api_vsn corr_id client_id =
+  let client_id_length = Bytes.length client_id in
+  to_buffer [
+    write_2_bytes api_key;
+    write_2_bytes api_vsn;
+    write_4_bytes corr_id;
+    write_2_bytes client_id_length;
+    client_id
+  ]
+
 let encode_req = function
-  | ApiVersionsReq (api_key, api_version, correlation_id, client_id) ->
-      let open Stdint in
-      let client_id_length = String.length client_id in
-      let bytes_length = 10 + client_id_length in
-      to_buffer ([
-        write_4_bytes bytes_length;
-        write_2_bytes api_key;
-        write_2_bytes api_version;
-        write_4_bytes correlation_id;
-        write_2_bytes client_id_length;
-        client_id
-      ])
+  | ApiVersionsReq (api_key, api_vsn, corr_id, client_id) ->
+      let req = request_header api_key api_vsn corr_id client_id in
+      to_buffer [
+        write_4_bytes (Bytes.length req);
+        req
+      ]
   | ProduceReq (
     (api_key,
      api_version,
      correlation_id,
      client_id),
     acks, timeout, topic_data) ->
-      let open Stdint in
       let (topic, partition_data) = topic_data in
       let partition_data = to_partition_data partition_data in
       let partition_data_size = List.length partition_data in
-      let client_id_length = String.length client_id in
       let topic_length = String.length topic in
       let req = to_buffer [
-        write_2_bytes api_key;
-        write_2_bytes api_version;
-        write_4_bytes correlation_id;
-        write_2_bytes client_id_length;
-        client_id;
+        request_header api_key api_version correlation_id client_id;
         write_2_bytes acks;
         write_4_bytes timeout;
         write_4_bytes 1; (* length of [topic_data] *)
@@ -107,9 +105,9 @@ let encode_req = function
 
 let decode_produce_resp bytes =
   try
-    let correlation_id = (Bytes.sub bytes 0 4) |> read_int32 in
+    let corr_id = (Bytes.sub bytes 0 4) |> read_int32 in
     let topic_data_size = (Bytes.sub bytes 4 4) |> read_int32 in
-    Right (ProduceResponse (Int32.to_int correlation_id,
+    Right (ProduceResponse (Int32.to_int corr_id,
                             Int32.to_int topic_data_size))
   with
   _ ->
@@ -117,7 +115,7 @@ let decode_produce_resp bytes =
 
 let decode_api_versions_resp bytes =
   try
-    let correlation_id = (Bytes.sub bytes 0 4) |> read_int32 |> Int32.to_int in
+    let corr_id = (Bytes.sub bytes 0 4) |> read_int32 |> Int32.to_int in
     let error_code = (Bytes.sub bytes 4 2) |> read_int16 |> Int16.to_int in
     let versions_size = (Bytes.sub bytes 6 4) |> read_int32 |> Int32.to_int in
     let rec versions n pos acc =
@@ -125,7 +123,7 @@ let decode_api_versions_resp bytes =
       else versions (n - 1) (n + 6) (((Bytes.sub bytes pos 2 |> read_int16 |> Int16.to_int),
             (Bytes.sub bytes (pos + 2) 2 |> read_int16 |> Int16.to_int),
             (Bytes.sub bytes (pos + 4) 2 |> read_int16 |> Int16.to_int)) :: acc) in
-    Right (ApiVersionsResponse (correlation_id,
+    Right (ApiVersionsResponse (corr_id,
                                 error_code,
                                 versions versions_size 10 []))
   with
