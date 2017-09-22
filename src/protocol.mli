@@ -17,20 +17,34 @@ type value = bytes
 type record = (key * value)
 type partition_data = (partition * record list)
 type topic_data = (topic * partition_data list)
+type offset = int64
+type node_id = int
+type host = string
+type port = int
+type broker = (node_id * host * port)
+type partition_response = (partition * error_code * offset)
+type topic_response = (topic * partition_response list)
 
 type request =
   | ApiVersionsReq of req_header
   | ProduceReq of (req_header * acks * timeout * topic_data)
+  | FetchReq of (req_header * topic * partition * offset)
+  | MetadataReq of (req_header * topic)
 
 type response =
   | ApiVersionsResponse of (correlation_id * error_code * api_versions list)
-  | HeadersResponse of (correlation_id * error_code)
-  | ProduceResponse of (correlation_id * int)
+  | ProduceResponse of (correlation_id * topic_response list)
+  | FetchResponse of (correlation_id * topic)
+  | MetadataResponse of (correlation_id * broker list)
 
 val create_api_versions_req : string -> request
 val create_produce_req : client_id -> topic -> partition -> key -> value -> request
+val create_fetch_req : client_id -> topic -> partition -> offset -> request
+val create_metadata_req : client_id -> topic -> request
 
 val encode_req : request -> bytes
 
 val decode_produce_resp : bytes -> (response, string) either
 val decode_api_versions_resp : bytes -> (response, string) either
+val decode_fetch_resp : bytes -> (response, string) either
+val decode_metadata_resp : bytes -> (response, string) either

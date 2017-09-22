@@ -19,9 +19,9 @@ let write_4_bytes (i : int) =
   let _ = Int32.(to_bytes_big_endian (of_int i) b 0) in
   b
 
-let write_8_bytes (i : int) =
+let write_8_bytes (i : int64) =
   let b = create 8 in
-  let _ = Int64.(to_bytes_big_endian (of_int i) b 0) in
+  let _ = Int64.(to_bytes_big_endian (of_int64 i) b 0) in
   b
 
 let read_int8 buffer =
