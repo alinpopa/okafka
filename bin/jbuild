@@ -1,9 +1,4 @@
 (executables
- ((names (main))
+ ((names (main consumer producer))
   (flags (:standard -warn-error A))
   (libraries (okafka))))
-
-(install
- ((section bin)
-  (package okafka)
-  (files ((main.exe as okafka)))))

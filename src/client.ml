@@ -56,13 +56,14 @@ let parse_fetch_resp ic =
   let open Lwt in
   Lwt_io.read ~count:4 ic >|= read_int32 >|= Int32.to_int >>= fun x ->
   Lwt_io.printlf "SIZE: %d" x >>= fun _ ->
-  Lwt_io.read ~count:x ic >>= fun b ->
-  if (Bytes.length b) <= 4 then
-    ((Lwt_io.read ~count:x ic) >|= fun b2 ->
-      let _ = Lwt_io.printl "Doing this shit..." in
-      decode_fetch_resp (Bytes.cat b b2))
-  else
-    (Lwt.return b >|= decode_fetch_resp)
+  Lwt_io.read ~count:x ic >|= fun b ->
+  decode_fetch_resp b
+  (*if (Bytes.length b) <= x then*)
+  (*  ((Lwt_io.read ~count:x ic) >|= fun b2 ->*)
+  (*    let _ = Lwt_io.printl "Doing this shit..." in*)
+  (*    decode_fetch_resp (Bytes.cat b b2))*)
+  (*else*)
+  (*  (Lwt.return b >|= decode_fetch_resp)*)
   (*if (Bytes.length b) <= 4 then ((Lwt_io.read ~count:x ic) >|= decode_fetch_resp) else (Lwt.return b >|= decode_fetch_resp)*)
   (*Lwt_io.read ~count:x ic >|= decode_fetch_resp*)
 

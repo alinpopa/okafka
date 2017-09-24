@@ -130,14 +130,14 @@ let fetch_req_to_bytes req =
     req_header_to_bytes header;
     write_4_bytes (-1); (* replica_id *)
     write_4_bytes 5000; (* max_wait_time *)
-    write_4_bytes 2048; (* min_bytes *)
+    write_4_bytes 1024; (* min_bytes *)
     write_4_bytes 1; (* length of [topics] *)
     write_2_bytes topic_length;
     topic;
     write_4_bytes 1; (* length of [partitions] *)
     write_4_bytes partition;
     write_8_bytes offset;
-    write_4_bytes 1048576 (* max_bytes per partition *)
+    write_4_bytes 512 (* max_bytes per partition *)
   ] in
   to_buffer [
     write_4_bytes (Bytes.length req);
@@ -219,13 +219,13 @@ let decode_api_versions_resp bytes =
 
 let decode_fetch_resp bytes =
   try
-    let correlation_id = (Bytes.sub bytes 0 4) |> read_int32 |> Int32.to_int in
-    let _ = Lwt_io.printlf "Response size: %d" (Bytes.length bytes) in
-    (*let x = (Bytes.sub bytes 4 4) |> read_int32 |> Int32.to_int in*)
+    let corr_id = (Bytes.sub bytes 0 4) |> read_int32 |> Int32.to_int in
+    let x = (Bytes.sub bytes 4 4) |> read_int32 |> Int32.to_int in
+    let _ = Lwt_io.printlf "Response size: %d, %d" (Bytes.length bytes) x in
     (*let _ = Lwt_io.printlf "X: %d" x in*)
     (*let topic_length = (Bytes.sub bytes 8 2) |> read_int16 |> Int16.to_int in*)
     (*let topic = (Bytes.sub bytes 10 topic_length) in*)
-    Right (FetchResponse (correlation_id, "logging"))
+    Right (FetchResponse (corr_id, "logging"))
   with
   _ ->
     Left "Error while decoding fetch response"

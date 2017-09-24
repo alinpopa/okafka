@@ -1,6 +1,6 @@
-.PHONY: clean build utop lwt
+.PHONY: clean build utop main consumer producer
 
-all: build
+all: build main consumer producer
 
 clean:
 	-rm -rf _build
@@ -9,6 +9,15 @@ clean:
 
 build:
 	jbuilder build --only-packages=okafka @install
+
+main: build
+	jbuilder build bin/main.exe
+
+consumer: build
+	jbuilder build bin/consumer.exe
+
+producer: build
+	jbuilder build bin/producer.exe
 
 utop:
 	jbuilder exec utop
