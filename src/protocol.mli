@@ -23,6 +23,8 @@ type host = string
 type port = int
 type broker = (node_id * host * port)
 type topic_response = (topic * partition * offset)
+type leader = node_id
+type partition_metadata = (partition * leader * error_code)
 
 type request =
   | ApiVersionsReq of req_header
@@ -34,7 +36,7 @@ type response =
   | ApiVersionsResponse of (correlation_id * api_versions list * error_code)
   | ProduceResponse of (correlation_id * topic_response * error_code)
   | FetchResponse of (correlation_id * topic * error_code)
-  | MetadataResponse of (correlation_id * broker list * error_code)
+  | MetadataResponse of (correlation_id * broker list * partition_metadata list * error_code)
 
 val create_api_versions_req : string -> request
 val create_produce_req : client_id -> topic -> partition -> key -> value -> request

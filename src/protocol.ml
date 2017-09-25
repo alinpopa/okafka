@@ -24,6 +24,8 @@ type host = string
 type port = int
 type broker = (node_id * host * port)
 type topic_response = (topic * partition * offset)
+type leader = node_id
+type partition_metadata = (partition * leader * error_code)
 
 type request =
   | ApiVersionsReq of req_header
@@ -35,7 +37,7 @@ type response =
   | ApiVersionsResponse of (correlation_id * api_versions list * error_code)
   | ProduceResponse of (correlation_id * topic_response * error_code)
   | FetchResponse of (correlation_id * topic * error_code)
-  | MetadataResponse of (correlation_id * broker list * error_code)
+  | MetadataResponse of (correlation_id * broker list * partition_metadata list * error_code)
 
 let create_api_versions_req client_id =
   ApiVersionsReq (18, 0, 1, client_id)
@@ -232,8 +234,37 @@ let decode_metadata_resp bytes =
       ) in
     let (pos, brokers) = brokers brokers_size 8 [] in
     let _topic_metadata_length = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int in
-    let topic_err_code = (Bytes.sub bytes (pos + 4) 2) |> read_int16 |> Int16.to_int in
-    Right (MetadataResponse (correlation_id, brokers, topic_err_code))
+    let pos = pos + 4 in
+    let topic_err_code = (Bytes.sub bytes pos 2) |> read_int16 |> Int16.to_int in
+    let pos = pos + 2 in
+    let _topic_length = (Bytes.sub bytes pos 2) |> read_int16 |> Int16.to_int in
+    let pos = pos + 2 in
+    let _topic = (Bytes.sub bytes pos _topic_length) in
+    let pos = pos + _topic_length in
+    let part_metadata_size = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int in
+    let pos = pos + 4 in
+    let rec part_metadata n pos acc =
+      if n = 0 then
+        (pos, acc)
+      else (
+        let err_code = (Bytes.sub bytes pos 2) |> read_int16 |> Int16.to_int in
+        let pos = pos + 2 in
+        let partition = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int in
+        let pos = pos + 4 in
+        let leader = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int in
+        let pos = pos + 4 in
+        let replica_size = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int in
+        let pos = pos + 4 in
+        (*let _replicas = (Bytes.sub bytes pos (_replica_size * 4)) |> read_int32 |> Int32.to_int in*)
+        let pos = pos + (replica_size * 4) in
+        let isr_size = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int in
+        let pos = pos + 4 in
+        (*let _isr = (Bytes.sub bytes pos (_isr_size * 4)) |> read_int32 |> Int32.to_int in*)
+        let pos = pos + (isr_size * 4) in
+        part_metadata (n - 1) pos ((partition, leader, err_code) :: acc)
+      ) in
+    let (pos, partitions_metadata) = part_metadata part_metadata_size pos [] in
+    Right (MetadataResponse (correlation_id, brokers, partitions_metadata, topic_err_code))
   with
   _ ->
     Left "Error while decoding metadata response"

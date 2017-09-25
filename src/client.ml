@@ -32,13 +32,19 @@ let resp_fetch_to_string resp =
     a b c)
 
 let resp_metadata_to_string resp =
-  let (corr_id, brokers, err_code) = resp in
+  let (corr_id, brokers, part_metadata, err_code) = resp in
+  let part_metadata_to_string part_metadata =
+    List.fold_left (
+      fun acc (part, leader, err) ->
+        acc ^ (Printf.sprintf "{partition:%d}{leader:%d}{err_code:%d}" part leader err)
+    ) "" part_metadata in
   Printf.(
     let a = sprintf "\t[corr_id:%d]" corr_id in
     let b = sprintf "\t[brokers_size:%d]" (List.length brokers) in
     let c = sprintf "\t[err_code:%d]" err_code in
-    sprintf "MetadataResponse\n%s\n%s\n%s"
-    a b c)
+    let d = sprintf "\t[part_metadata:%s]" (part_metadata_to_string part_metadata) in
+    sprintf "MetadataResponse\n%s\n%s\n%s\n%s"
+    a b c d)
 
 let response_to_string = function
   | ApiVersionsResponse resp ->
@@ -54,6 +60,7 @@ let versions_to_string versions =
   List.fold_left (fun acc (api_key, min, max) ->
     acc ^ (Printf.sprintf "{api_key: %d, min: %d, max: %d}" api_key min max))
     ""
+
 let response_printer resp =
   Lwt.(resp >|= response_to_string >>= fun x -> Lwt_io.printl x)
 
