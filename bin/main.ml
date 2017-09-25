@@ -14,7 +14,7 @@ let () =
     let connection =
       Conduit_lwt_unix.endp_to_client
         ~ctx:default_ctx
-        Conduit.(`TCP ((Ipaddr.of_string_exn "127.0.0.1"), 19093)) in
+        Conduit.(`TCP ((Ipaddr.of_string_exn "127.0.0.1"), 19092)) in
     let connected_client =
       connection >>= fun client ->
       Conduit_lwt_unix.connect default_ctx client in

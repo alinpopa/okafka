@@ -6,12 +6,12 @@ let () =
   let open Okafka.Lib in
   let open Stdint in
   Lwt_main.run (
-    let buff = encode_req (create_fetch_req "simple_client" "logging" 0 (Int64.of_int 0)) in
+    let buff = encode_req (create_fetch_req "simple_client" "logging" 0 (Int64.of_int 5)) in
     let default_ctx = Conduit_lwt_unix.default_ctx in
     let connection =
       Conduit_lwt_unix.endp_to_client
         ~ctx:default_ctx
-        Conduit.(`TCP ((Ipaddr.of_string_exn "127.0.0.1"), 19091)) in
+        Conduit.(`TCP ((Ipaddr.of_string_exn "127.0.0.1"), 19092)) in
     let connected_client =
       connection >>= fun client ->
       Conduit_lwt_unix.connect default_ctx client in

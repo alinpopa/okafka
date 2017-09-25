@@ -1,39 +1,54 @@
 open Protocol
 open Bytes
 
+let resp_api_version_to_string resp =
+  let (corr_id, versions, err_code) = resp in
+  Printf.(
+    let a = sprintf "\t[corr_id:%d]" corr_id in
+    let b = sprintf "\t[versions_size:%d]" (List.length versions) in
+    let c = sprintf "\t[err_code:%d]" err_code in
+    sprintf "ApiVersionsResponse\n%s\n%s\n%s"
+    a b c)
+
+let resp_produce_to_string resp =
+  let (corr_id, topic_response, err_code) = resp in
+  let (topic, partition, offset) = topic_response in
+  Printf.(
+    let a = sprintf "\t[corr_id:%d]" corr_id in
+    let b = sprintf "\t[topic:%s]" topic in
+    let c = sprintf "\t[partition:%d]" partition in
+    let d = sprintf "\t[offset:%Ld]" offset in
+    let e = sprintf "\t[err_code:%d]" err_code in
+    sprintf "ProduceResponse\n%s\n%s\n%s\n%s\n%s"
+    a b c d e)
+
+let resp_fetch_to_string resp =
+  let (corr_id, topic, err_code) = resp in
+  Printf.(
+    let a = sprintf "\t[corr_id:%d]" corr_id in
+    let b = sprintf "\t[topic:%s]" topic in
+    let c = sprintf "\t[err_code:%d]" err_code in
+    sprintf "FetchResponse\n%s\n%s\n%s"
+    a b c)
+
+let resp_metadata_to_string resp =
+  let (corr_id, brokers, err_code) = resp in
+  Printf.(
+    let a = sprintf "\t[corr_id:%d]" corr_id in
+    let b = sprintf "\t[brokers_size:%d]" (List.length brokers) in
+    let c = sprintf "\t[err_code:%d]" err_code in
+    sprintf "MetadataResponse\n%s\n%s\n%s"
+    a b c)
+
 let response_to_string = function
-  | ApiVersionsResponse (correlation_id, error_code, versions) ->
-      Printf.sprintf "ApiVersionsResponse [correlation_id:%d][error_code:%d][versions_size:%d]"
-      correlation_id error_code (List.length versions)
-  | ProduceResponse (b, c) ->
-      let rec topic x acc =
-        match x with
-        | [] -> acc
-        | (_, parts) :: xs ->
-            let rec part x acc = match x with
-            | [] -> acc
-            | (partition, err_code, _) :: xs ->
-                part xs (acc ^ ":partition:" ^ (string_of_int partition) ^ ":err_code:" ^ (string_of_int err_code)) in
-            let parts = part parts "" in
-            topic xs parts in
-      (*let rec partitions x acc =*)
-      (*  match x with*)
-      (*  | [] -> acc*)
-      (*  | (topic, parts) :: xs ->*)
-      (*      let rec parts p acc =*)
-      (*        match p with*)
-      (*        | [] -> acc*)
-      (*        | (part, err_code, _) :: xs ->*)
-      (*            parts xs (acc ^ " : " ^ (string_of_int err_code)) in*)
-      (*      partitions xs (acc ^ (parts parts "")) in*)
-      Printf.sprintf "ProduceResponse [correlation_id:%d][topic_data_size:%s]"
-      b (topic c "")
-  | FetchResponse (correlation_id, topic) ->
-      Printf.sprintf "FetchResponse [correlation_id:%d][topic:%s]"
-      correlation_id topic
-  | MetadataResponse (correlation_id, brokers) ->
-      Printf.sprintf "MetadataResponse [correlation_id:%d][brokers_size:%d]"
-      correlation_id (List.length brokers)
+  | ApiVersionsResponse resp ->
+      resp_api_version_to_string resp
+  | ProduceResponse resp ->
+      resp_produce_to_string resp
+  | FetchResponse resp ->
+      resp_fetch_to_string resp
+  | MetadataResponse resp ->
+      resp_metadata_to_string resp
 
 let versions_to_string versions =
   List.fold_left (fun acc (api_key, min, max) ->
@@ -42,52 +57,32 @@ let versions_to_string versions =
 let response_printer resp =
   Lwt.(resp >|= response_to_string >>= fun x -> Lwt_io.printl x)
 
+let read_bytes ic length =
+  let open Lwt in
+  let rec read_bytes ic length acc =
+    if length <= 0 then
+      Lwt.return acc
+    else
+      Lwt_io.read ~count:length ic >>=
+      fun bytes -> read_bytes ic (length - (Bytes.length bytes)) (Bytes.cat acc bytes) in
+  read_bytes ic length Bytes.empty
+
 let parse_produce_resp ic =
   let open Lwt in
-  Lwt_io.read ~count:4 ic >|= read_int32 >|= Int32.to_int >>= fun x ->
-  Lwt_io.read ~count:x ic >|= decode_produce_resp
+  Lwt_io.read ~count:4 ic >|= read_int32 >|= Int32.to_int >>=
+  read_bytes ic >|= decode_produce_resp
 
 let parse_api_versions_resp ic =
   let open Lwt in
-  Lwt_io.read ~count:4 ic >|= read_int32 >|= Int32.to_int >>= fun x ->
-  Lwt_io.read ~count:x ic >|= decode_api_versions_resp
+  Lwt_io.read ~count:4 ic >|= read_int32 >|= Int32.to_int >>=
+  read_bytes ic >|= decode_api_versions_resp
 
 let parse_fetch_resp ic =
   let open Lwt in
-  Lwt_io.read ~count:4 ic >|= read_int32 >|= Int32.to_int >>= fun x ->
-  Lwt_io.printlf "SIZE: %d" x >>= fun _ ->
-  Lwt_io.read ~count:x ic >|= fun b ->
-  decode_fetch_resp b
-  (*if (Bytes.length b) <= x then*)
-  (*  ((Lwt_io.read ~count:x ic) >|= fun b2 ->*)
-  (*    let _ = Lwt_io.printl "Doing this shit..." in*)
-  (*    decode_fetch_resp (Bytes.cat b b2))*)
-  (*else*)
-  (*  (Lwt.return b >|= decode_fetch_resp)*)
-  (*if (Bytes.length b) <= 4 then ((Lwt_io.read ~count:x ic) >|= decode_fetch_resp) else (Lwt.return b >|= decode_fetch_resp)*)
-  (*Lwt_io.read ~count:x ic >|= decode_fetch_resp*)
+  Lwt_io.read ~count:4 ic >|= read_int32 >|= Int32.to_int >>=
+  read_bytes ic >|= decode_fetch_resp
 
 let parse_metadata_resp ic =
   let open Lwt in
-  Lwt_io.read ~count:4 ic >|= read_int32 >|= Int32.to_int >>= fun x ->
-  Lwt_io.read ~count:x ic >|= decode_metadata_resp
-  (*Lwt_io.printlf "SIZE METADATA: %d" x >>= fun _ ->*)
-  (*Lwt_io.read ~count:x ic >>= fun bytes ->*)
-  (*let correlation_id = (Bytes.sub bytes 0 4) |> read_int32 |> Int32.to_int in*)
-  (*let brokers_length = (Bytes.sub bytes 4 4) |> read_int32 |> Int32.to_int in*)
-  (*(*let broker0_node_id = (Bytes.sub bytes 8 4) |> read_int32 |> Int32.to_int in*)*)
-  (*(*let broker0_host_length = 13 in*)*)
-  (*(*let broker0_host = Bytes.sub bytes 14 broker0_host_length in*)*)
-  (*(*let broker0_port = (Bytes.sub bytes 27 4) |> read_int32 |> Int32.to_int in*)*)
-  (*(*let broker1_node_id = (Bytes.sub bytes 31 4) |> read_int32 |> Int32.to_int in*)*)
-  (*(*let broker1_host_length = 13 in*)*)
-  (*(*let broker1_host = Bytes.sub bytes 37 broker1_host_length in*)*)
-  (*(*let broker1_port = (Bytes.sub bytes 50 4) |> read_int32 |> Int32.to_int in*)*)
-  (*(*let broker2_node_id = (Bytes.sub bytes 54 4) |> read_int32 |> Int32.to_int in*)*)
-  (*(*let broker2_host_length = 13 in*)*)
-  (*(*let broker2_host = Bytes.sub bytes 60 broker2_host_length in*)*)
-  (*(*let broker2_port = (Bytes.sub bytes 73 4) |> read_int32 |> Int32.to_int in*)*)
-  (*let x = (Bytes.sub bytes 170 4) |> read_int32 |> Int32.to_int in *)
-  (*(*Lwt_io.printlf "Correlation_id: %d\nbrokers_length: %d\nbroker0_node_id: %d\nbroker0_host: %s\nbroker0_port: %d\nbroker1_node_id: %d\nbroker1_host: %s\nbroker1_port: %d"*)*)
-  (*Lwt_io.printlf "Correlation_id: %d\nbrokers_length: %d\nx: %d"*)
-  (*  correlation_id brokers_length x*)
+  Lwt_io.read ~count:4 ic >|= read_int32 >|= Int32.to_int >>=
+  read_bytes ic >|= decode_metadata_resp
