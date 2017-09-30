@@ -1,4 +1,4 @@
-type ('a, 'b) either = Right of 'a | Left of 'b
+type ('a, 'b) either = Left of 'a | Right of 'b
 
 let explode s =
   let rec exp i l =
