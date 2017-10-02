@@ -63,6 +63,24 @@ module Req = struct
       timeout: timeout;
       topic_data: topic_data
     }
+
+    let create topic partition (key, value) = {
+      header = {
+        api_key = 0;
+        api_version = 0;
+        correlation_id = 1;
+        client_id = "okafka.req"
+      };
+      acks = 1;
+      timeout = 0;
+      topic_data = {
+        topic;
+        partitions_data = [{
+          partition;
+          records = [{key; value}]
+        }]
+      }
+    }
   end
 
   module Fetch = struct
@@ -80,12 +98,15 @@ module Req = struct
       topic: topic
     }
 
-    let create client_id topic =
-      {header = {api_key = 3;
-                 api_version = 0;
-                 correlation_id = 1;
-                 client_id};
-       topic}
+    let create client_id topic = {
+      header = {
+        api_key = 3;
+        api_version = 0;
+        correlation_id = 1;
+        client_id
+      };
+      topic
+    }
   end
   
   type t =
@@ -224,6 +245,11 @@ module Resp = struct
       leaders: partition_metadata list;
       error_code: error_code
     }
+
+    let get_broker part brokers leaders =
+      let {leader} = List.find (fun {partition} -> partition = part) leaders in
+      let {node_id; host; port} = List.find (fun {node_id} -> node_id = leader) brokers in
+      {node_id; host; port}
   end
 
   type t =
