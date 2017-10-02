@@ -11,7 +11,7 @@ available: [
   ocaml-version >= "4.04.0"
 ]
 build: [
-  ["jbuilder" "build" "--only" "okafka" "--root" "." "-j" jobs "@install"]
+  ["jbuilder" "build" "-p" "okafka" "." "-j" jobs "@install"]
 ]
 depends: [
   "jbuilder" {build & >= "1.0+beta10"}

@@ -1,8 +1,8 @@
 open Lwt
 open Okafka.Client
 open Okafka.Protocol
-open Okafka.Bytes
-open Okafka.Lib
+open Okafka_lib.Bytes
+open Okafka_lib.Lib
 open Stdint
 
 let () =

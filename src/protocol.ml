@@ -1,5 +1,5 @@
-open Bytes
-open Lib
+open Okafka_lib.Bytes
+open Okafka_lib.Lib
 
 type correlation_id = int
 type client_id = string

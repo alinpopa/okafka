@@ -1,5 +1,5 @@
 open Protocol
-open Bytes
+open Okafka_lib.Bytes
 
 let resp_api_version_to_string resp =
   let (corr_id, versions, err_code) = resp in

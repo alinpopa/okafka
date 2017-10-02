@@ -2,8 +2,8 @@ let () =
   let open Lwt in
   let open Okafka.Client in
   let open Okafka.Protocol in
-  let open Okafka.Bytes in
-  let open Okafka.Lib in
+  let open Okafka_lib.Bytes in
+  let open Okafka_lib.Lib in
   let open Stdint in
   Lwt_main.run (
     let buff_metadata =

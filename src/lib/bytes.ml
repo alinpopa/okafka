@@ -1,4 +1,4 @@
-include Core.Caml.Bytes
+include BytesLabels
 include Stdint
 
 let to_buffer data =
