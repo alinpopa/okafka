@@ -1,8 +1,8 @@
 open Lwt
 open Okafka.Client
 open Okafka.Proto
-open Okafka_lib.Bytes
-open Okafka_lib.Lib
+open OkafkaLib.Bytes
+open OkafkaLib.Lib
 open Stdint
 
 let resp_fetch_to_string resp =

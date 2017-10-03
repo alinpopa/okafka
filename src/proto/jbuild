@@ -1,5 +1,5 @@
 (library
-  ((name okafka_proto)
+  ((name okafkaProto)
    (public_name okafka.proto)
    (flags (:standard -warn-error A))
-   (libraries (lwt okafka.lib))))
+   (libraries (okafka.lib core))))

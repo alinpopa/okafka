@@ -1,4 +1,5 @@
-open Okafka_lib.Bytes
+open OkafkaLib.Bytes
+open Proto
 
 module Produce = struct
   type t = {
