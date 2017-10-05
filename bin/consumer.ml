@@ -27,7 +27,7 @@ let send_req (reader, writer) (req : Req.Fetch.t) =
   fun ({Resp.Fetch.correlation_id; topic; error_code} as resp) ->
   if error_code != 0 then
     let buff_meta =
-      let req = Req.Metadata.create client_id topic in
+      let req = Req.Metadata.create topic in
       Req.encode (Req.Metadata req) in
     Lwt_io.write writer buff_meta >>=
     fun _ -> parse_metadata_resp reader >|=

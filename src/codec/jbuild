@@ -1,0 +1,5 @@
+(library
+  ((name okafkaCodec)
+   (public_name okafka.codec)
+   (flags (:standard -warn-error A))
+   (libraries (okafka.proto lwt))))

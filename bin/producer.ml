@@ -1,5 +1,19 @@
 let () =
   let open Lwt in
+  let open Okafka in
+  let producer = Producer.create (Producer.broker ("127.0.0.1", 19093)) "logging" 0 in
+  Lwt_main.run (
+    Producer.send ~msg:("one key", "one value") ~producer >>=
+    function
+    | Producer.Response (error_code, _) ->
+        Lwt_io.printlf "Error code: %d" error_code
+    | Producer.Reconnected (_, (error_code, _)) ->
+        Lwt_io.printlf "Error code: %d" error_code
+  )
+
+(*
+let () =
+  let open Lwt in
   let open Okafka.Client in
   let open Okafka.Protocol in
   let open OkafkaLib.Bytes in
@@ -30,3 +44,4 @@ let () =
       (fun resp -> response_to_string (resp :> response)) >>=
       Lwt_io.printl
   )
+*)

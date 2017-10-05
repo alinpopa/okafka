@@ -1,6 +1,14 @@
-open Proto
+open OkafkaProto
+open OkafkaLib.Lib
+open OkafkaCodec
 
-type t = (Lwt_io.input_channel * Lwt_io.output_channel) Lwt.t
+type state = {
+  channels: (Lwt_io.input_channel * Lwt_io.output_channel);
+  partition: int;
+  topic: string
+}
+
+type t = state Lwt.t
 
 type 'a resp =
     | Response of 'a
@@ -13,7 +21,15 @@ type broker = (string * int)
 let broker (host, port) =
   (host, port)
 
-let create (host, port) =
+let send_meta_req writer reader topic =
+  let open Lwt in
+  let buff_meta =
+    let req = Req.Metadata.create topic in
+    Encoder.encode (Req.Metadata req) in
+  Lwt_io.write writer buff_meta >>=
+  fun _ -> Decoder.parse_metadata_resp reader
+
+let rec reconnect (host, port) topic partition init =
   let open Lwt in
   let default_ctx = Conduit_lwt_unix.default_ctx in
   let connect ip port = (
@@ -24,35 +40,46 @@ let create (host, port) =
     let connected_client =
       connection >>=
       fun client -> Conduit_lwt_unix.connect default_ctx client in
-    connected_client >|=
-    (fun ((_flow, ic, oc)) -> (ic, oc))
+    connected_client >>=
+    fun ((_flow, ic, oc)) ->
+      if init = true then
+        send_meta_req oc ic topic >>=
+        fun ({Resp.Metadata.brokers; leaders}) ->
+          let {Proto.host; port} = Resp.Metadata.get_broker partition brokers leaders in
+          try_with (close_chan ic) >>= fun _ -> try_with (close_chan oc) >>=
+          fun _ -> reconnect (host, port) topic partition false
+      else
+        Lwt.return {
+          channels = (ic, oc);
+          partition;
+          topic
+        }
   ) in
-  connect host port
+  try_with (fun _ -> connect host port) >>= maybe_fail_with_log
+
+let create (host, port) topic partition =
+  let open Lwt in
+  reconnect (host, port) topic partition true
 
 let send_req reader writer (req : Req.Produce.t) partition =
   let open Lwt in
-  let client_id = req.header.client_id in
-  let buff = Req.encode (Req.Produce req) in
+  let buff = Encoder.encode (Req.Produce req) in
   Lwt_io.write writer buff >>=
-  fun _ -> parse_produce_resp reader >>=
+  fun _ -> Decoder.parse_produce_resp reader >>=
   fun ({Resp.Produce.topic_response; error_code} as resp) ->
   if error_code != 0 then
-    let buff_meta =
-      let req = Req.Metadata.create client_id topic_response.topic in
-      Req.encode (Req.Metadata req) in
-    Lwt_io.write writer buff_meta >>=
-    fun _ -> parse_metadata_resp reader >|=
+    send_meta_req writer reader topic_response.topic >|=
     fun ({Resp.Metadata.correlation_id; brokers; leaders}) ->
-      Retry (req, Resp.Metadata.get_broker partition brokers leaders)
+      Proto.Retry (req, Resp.Metadata.get_broker partition brokers leaders)
   else
-    Lwt.return (Just resp)
+    Lwt.return (Proto.Just resp)
 
-let send ~producer ~topic ~partition ~msg =
+let send ~producer ~msg =
   let open Lwt in
-  let req = Req.Produce.create topic partition msg in
-  let rec send producer req reconnected =
+  let rec send producer reconnected =
     producer >>=
-    fun (ic, oc) ->
+    fun ({channels = (ic, oc); topic; partition}) ->
+      let req = Req.Produce.create topic partition msg in
       send_req ic oc req partition >>=
       function
         | Just ({Resp.Produce.error_code}) ->
@@ -61,7 +88,7 @@ let send ~producer ~topic ~partition ~msg =
             else
               Lwt.return (Response (error_code, error_code))
         | Retry (req, {host; port}) ->
-            send (create (host, port)) req true
+            send (reconnect (host, port) topic partition false) true
         | Failed err ->
             Lwt.return (Response (0, 0)) in
-  send producer req false
+  send producer false

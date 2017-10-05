@@ -1,5 +1,3 @@
-open Bytes
-
 type correlation_id = int
 type client_id = string
 type api_version = int
@@ -54,3 +52,8 @@ type partition_metadata = {
   leader: node_id;
   error_code: error_code
 }
+
+type ('a, 'b) client_response =
+  | Just of 'b
+  | Retry of ('a * broker)
+  | Failed of string

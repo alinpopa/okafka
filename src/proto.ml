@@ -98,12 +98,12 @@ module Req = struct
       topic: topic
     }
 
-    let create client_id topic = {
+    let create topic = {
       header = {
         api_key = 3;
         api_version = 0;
         correlation_id = 1;
-        client_id
+        client_id = "okafka.meta.client"
       };
       topic
     }
@@ -266,22 +266,6 @@ type ('a, 'b) client_response =
 let with_pos pos value =
   (pos, value)
 
-let decode_produce_resp bytes =
-  let (pos, correlation_id) = (Bytes.sub bytes 0 4) |> read_int32 |> Int32.to_int |> with_pos 4 in
-  let (pos, _topic_response_size) = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int |> with_pos (pos + 4) in
-  let (pos, topic_length) = (Bytes.sub bytes pos 2) |> read_int16 |> Int16.to_int |> with_pos (pos + 2) in
-  let (pos, topic) = (Bytes.sub bytes pos topic_length) |> with_pos (pos + topic_length) in
-  let (pos, _partitions_resp_size) = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int |> with_pos (pos + 4) in
-  let (pos, partition) = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int |> with_pos (pos + 4) in
-  let (pos, error_code) = (Bytes.sub bytes pos 2) |> read_int16 |> Int16.to_int |> with_pos (pos + 2) in
-  let (_pos, offset) = (Bytes.sub bytes pos 8) |> read_int64 |> Int64.to_int64 |> with_pos (pos + 8) in
-  let topic_response = {topic; partition; offset} in
-  Resp.({
-    Produce.correlation_id;
-    topic_response;
-    error_code
-  })
-
 let decode_fetch_resp bytes =
   let (pos, correlation_id) = (Bytes.sub bytes 0 4) |> read_int32 |> Int32.to_int |> with_pos 4 in
   let (pos, _responses_length) = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int |> with_pos (pos + 4) in
@@ -366,11 +350,6 @@ let read_bytes ic length =
       Lwt_io.read ~count:length ic >>=
       fun bytes -> read_bytes ic (length - (Bytes.length bytes)) (Bytes.cat acc bytes) in
   read_bytes ic length Bytes.empty
-
-let parse_produce_resp ic =
-  let open Lwt in
-  Lwt_io.read ~count:4 ic >|= read_int32 >|= Int32.to_int >>=
-  read_bytes ic >|= decode_produce_resp
 
 (*let parse_api_versions_resp ic =*)
 (*  let open Lwt in*)
