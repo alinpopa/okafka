@@ -74,6 +74,40 @@ let decode_produce_resp bytes =
     error_code
   })
 
+let decode_fetch_resp bytes =
+  let open Proto in
+  let (pos, correlation_id) = (Bytes.sub bytes 0 4) |> read_int32 |> Int32.to_int |> with_pos 4 in
+  let (pos, _responses_length) = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int |> with_pos (pos + 4) in
+  let (pos, topic_length) = (Bytes.sub bytes pos 2) |> read_int16 |> Int16.to_int |> with_pos (pos + 2) in
+  let (pos, topic) = (Bytes.sub bytes pos topic_length) |> with_pos (pos + topic_length) in
+  let (pos, _partitions_length) = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int |> with_pos (pos + 4) in
+  let (pos, _partition) = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int |> with_pos (pos + 4) in
+  let (pos, error_code) = (Bytes.sub bytes pos 2) |> read_int16 |> Int16.to_int |> with_pos (pos + 2) in
+  let (pos, _high_watermark) = (Bytes.sub bytes pos 8) |> read_int64 |> Int64.to_int |> with_pos (pos + 8) in
+  let (pos, record_set_length) = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int |> with_pos (pos + 4) in
+  let _pos =
+    if record_set_length != 0 then
+      let (pos, offset) = (Bytes.sub bytes pos 8) |> read_int64 |> Int64.to_string |> with_pos (pos + 8) in
+      let (pos, message_size) = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int |> with_pos (pos + 4) in
+      let (pos, crc) = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int |> with_pos (pos + 4) in
+      let (pos, magic_byte) = (Bytes.sub bytes pos 1) |> read_int8 |> Int8.to_int |> with_pos (pos + 1) in
+      let (pos, attr) = (Bytes.sub bytes pos 1) |> read_int8 |> Int8.to_int |> with_pos (pos + 1) in
+      let (pos, key_length) = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int |> with_pos (pos + 4) in
+      let (pos, key) = (Bytes.sub bytes pos key_length) |> with_pos (pos + key_length) in
+      let (pos, val_length) = (Bytes.sub bytes pos 4) |> read_int32 |> Int32.to_int |> with_pos (pos + 4) in
+      let (pos, value) = (Bytes.sub bytes pos val_length) |> with_pos (pos + val_length) in
+      let _ = Lwt_io.printlf "Recordset length: %d, offset: %s, message size: %d, crc: %d, magic: %d, attr: %d, key: %s, val: %s"
+      record_set_length offset message_size crc magic_byte attr key value in
+      pos
+    else
+      let _ = Lwt_io.printlf "Recorset length: %d" record_set_length in
+      pos in
+  Resp.({
+    Fetch.correlation_id;
+    topic;
+    error_code
+  })
+
 let parse_metadata_resp ic =
   let open Lwt in
   Lwt_io.read ~count:4 ic >|= read_int32 >|= Int32.to_int >>=
@@ -83,3 +117,8 @@ let parse_produce_resp ic =
   let open Lwt in
   Lwt_io.read ~count:4 ic >|= read_int32 >|= Int32.to_int >>=
   read_bytes ic >|= decode_produce_resp
+
+let parse_fetch_resp ic =
+  let open Lwt in
+  Lwt_io.read ~count:4 ic >|= read_int32 >|= Int32.to_int >>=
+  read_bytes ic >|= decode_fetch_resp

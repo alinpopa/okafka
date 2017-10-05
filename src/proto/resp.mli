@@ -9,7 +9,11 @@ module Produce : sig
 end
 
 module Fetch : sig
-  type t
+  type t = {
+    correlation_id: correlation_id;
+    topic: topic;
+    error_code: error_code
+  }
 end
 
 module Metadata : sig

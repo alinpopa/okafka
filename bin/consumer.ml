@@ -1,11 +1,12 @@
 open Lwt
-open Okafka.Client
-open Okafka.Proto
+open OkafkaProto
+open OkafkaCodec
 open OkafkaLib.Bytes
 open OkafkaLib.Lib
 open Stdint
 
 let resp_fetch_to_string resp =
+  let open Proto in
   let {Resp.Fetch.correlation_id = corr_id; topic; error_code = err_code} = resp in
   Printf.(
     let a = sprintf "\t[corr_id:%d]" corr_id in
@@ -15,22 +16,24 @@ let resp_fetch_to_string resp =
     a b c)
 
 let get_broker part brokers leaders =
+  let open Proto in
   let {leader} = List.find (fun {partition} -> partition = part) leaders in
   let {node_id; host; port} = List.find (fun {node_id} -> node_id = leader) brokers in
   {node_id; host; port}
 
 let send_req (reader, writer) (req : Req.Fetch.t) =
+  let open Proto in
   let (client_id, partition) = (req.header.client_id, req.partition) in
-  let buff = Req.encode (Req.Fetch req) in
+  let buff = Encoder.encode (Req.Fetch req) in
   Lwt_io.write writer buff >>=
-  fun _ -> parse_fetch_resp reader >>=
+  fun _ -> Decoder.parse_fetch_resp reader >>=
   fun ({Resp.Fetch.correlation_id; topic; error_code} as resp) ->
   if error_code != 0 then
     let buff_meta =
       let req = Req.Metadata.create topic in
-      Req.encode (Req.Metadata req) in
+      Encoder.encode (Req.Metadata req) in
     Lwt_io.write writer buff_meta >>=
-    fun _ -> parse_metadata_resp reader >|=
+    fun _ -> Decoder.parse_metadata_resp reader >|=
     fun ({Resp.Metadata.correlation_id; brokers; leaders}) ->
       Retry (req, get_broker partition brokers leaders)
   else
