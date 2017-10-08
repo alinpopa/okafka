@@ -31,22 +31,14 @@ let send_meta_req writer reader topic =
 
 let rec reconnect (host, port) topic partition init =
   let open Lwt in
-  let default_ctx = Conduit_lwt_unix.default_ctx in
   let connect ip port = (
-    let connection =
-      Conduit_lwt_unix.endp_to_client
-      ~ctx:default_ctx
-      Conduit.(`TCP ((Ipaddr.of_string_exn ip), port)) in
-    let connected_client =
-      connection >>=
-      fun client -> Conduit_lwt_unix.connect default_ctx client in
-    connected_client >>=
-    fun ((_flow, ic, oc)) ->
+    Conn.create ip port >>=
+    fun ((ic, oc) as conn) ->
       if init = true then
         send_meta_req oc ic topic >>=
         fun ({Resp.Metadata.brokers; leaders}) ->
           let {Proto.host; port} = Resp.Metadata.get_broker partition brokers leaders in
-          try_with (close_chan ic) >>= fun _ -> try_with (close_chan oc) >>=
+          Conn.close conn >>=
           fun _ -> reconnect (host, port) topic partition false
       else
         Lwt.return {
@@ -67,7 +59,7 @@ let send_req reader writer (req : Req.Produce.t) partition =
   Lwt_io.write writer buff >>=
   fun _ -> Decoder.parse_produce_resp reader >>=
   fun ({Resp.Produce.topic_response; error_code} as resp) ->
-  if error_code != 0 then
+  if error_code = 3 || error_code = 6 then
     send_meta_req writer reader topic_response.topic >|=
     fun ({Resp.Metadata.correlation_id; brokers; leaders}) ->
       Proto.Retry (req, Resp.Metadata.get_broker partition brokers leaders)

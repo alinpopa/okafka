@@ -12,7 +12,9 @@ module Fetch : sig
   type t = {
     correlation_id: correlation_id;
     topic: topic;
-    error_code: error_code
+    partition: partition;
+    error_code: error_code;
+    data: (offset * record) list
   }
 end
 

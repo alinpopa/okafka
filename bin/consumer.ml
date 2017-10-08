@@ -7,13 +7,18 @@ open Stdint
 
 let resp_fetch_to_string resp =
   let open Proto in
-  let {Resp.Fetch.correlation_id = corr_id; topic; error_code = err_code} = resp in
+  let {
+    Resp.Fetch.correlation_id = corr_id;
+    topic;
+    error_code = err_code;
+    data} = resp in
   Printf.(
     let a = sprintf "\t[corr_id:%d]" corr_id in
     let b = sprintf "\t[topic:%s]" topic in
     let c = sprintf "\t[err_code:%d]" err_code in
-    sprintf "FetchResponse\n%s\n%s\n%s"
-    a b c)
+    let d = sprintf "\t[data_length:%d]" (List.length data) in
+    sprintf "FetchResponse\n%s\n%s\n%s\n%s"
+    a b c d)
 
 let get_broker part brokers leaders =
   let open Proto in
@@ -28,7 +33,7 @@ let send_req (reader, writer) (req : Req.Fetch.t) =
   Lwt_io.write writer buff >>=
   fun _ -> Decoder.parse_fetch_resp reader >>=
   fun ({Resp.Fetch.correlation_id; topic; error_code} as resp) ->
-  if error_code != 0 then
+  if error_code = 3 || error_code = 6 then
     let buff_meta =
       let req = Req.Metadata.create topic in
       Encoder.encode (Req.Metadata req) in
@@ -65,6 +70,6 @@ let () =
     ) in
     (*let req = ((1, 0, 1, "simple_client"), "logging", 0, (Int64.of_int 0)) in*)
     let req = {Req.Fetch.header = {api_key = 1; api_version = 0; correlation_id = 1; client_id = "simple_client"};
-    topic = "logging"; partition = 0; offset = (Int64.of_int 0)} in
+    topic = "logging"; partition = 0; offset = (Int64.of_int 13)} in
     send_request "127.0.0.1" 19093 req
   )
