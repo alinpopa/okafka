@@ -30,8 +30,14 @@ let read_int8 buffer =
 let read_int16 buffer =
   Int16.of_bytes_big_endian buffer 0
 
+let read_int16_to_int buffer =
+  read_int16 buffer |> Int16.to_int
+
 let read_int32 buffer =
   Int32.of_bytes_big_endian buffer 0
+
+let read_int32_to_int buffer =
+  read_int32 buffer |> Int32.to_int
 
 let read_int64 buffer =
   Int64.of_bytes_big_endian buffer 0
