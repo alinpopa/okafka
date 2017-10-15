@@ -70,6 +70,6 @@ let () =
     ) in
     (*let req = ((1, 0, 1, "simple_client"), "logging", 0, (Int64.of_int 0)) in*)
     let req = {Req.Fetch.header = {api_key = 1; api_version = 0; correlation_id = 1; client_id = "simple_client"};
-    topic = "logging"; partition = 0; offset = (Int64.of_int 13)} in
-    send_request "127.0.0.1" 19093 req
+    topic = "logging"; partition = 0; offset = (Int64.of_int 0)} in
+    send_request "127.0.0.1" 19091 req
   )
