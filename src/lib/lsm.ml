@@ -1,15 +1,15 @@
-type ('s, 'a) state = ('s -> 'a * 's)
+type ('s, 'a) t = ('s -> 'a * 's)
 
-let return2 f =
+let state f =
   f
 
-let return a =
-  fun s -> (a, s)
+let return x =
+  fun s -> (x, s)
 
 let run s x =
   s x
 
-let (>>>) m f =
+let (>>=) m f =
   fun s ->
     let (a, s') = run m s in
     run (f a) s'
@@ -23,5 +23,5 @@ let put x =
     ((), x)
 
 let modify f =
-  get >>> fun x ->
+  get >>= fun x ->
   put (f x)
