@@ -1,3 +1,4 @@
+(* a Little State Monad *)
 type ('s, 'a) t = ('s -> 'a * 's)
 
 let state f =
