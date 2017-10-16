@@ -14,37 +14,26 @@ let read_bytes ic length =
 let with_acc acc value =
   (acc, value)
 
-let read_int32 n =
+let read_int32 =
   let open OkafkaLib.Lsm in
   get >>= fun (bytes, pos) ->
-  put (bytes, pos + n) >>= fun _ ->
-  return (Bytes.sub bytes pos n |> read_int32_to_int)
-
-let read_int32 =
-  read_int32 4
+  put (bytes, pos + 4) >>= fun _ ->
+  return (Bytes.sub bytes pos 4 |> read_int32_to_int)
 
 let read_int16 =
   let open OkafkaLib.Lsm in
   state (fun (bytes, pos) ->
     ((Bytes.sub bytes pos 2) |> read_int16_to_int, (bytes, pos + 2)))
 
-let read_int64 n =
-  let open OkafkaLib.Lsm in
-  let open OkafkaLib.Bytes in
-  state (fun (bytes, pos) ->
-    (Bytes.sub bytes pos n |> read_int64, (bytes, pos + n)))
-
 let read_int64 =
-  read_int64 8
-
-let read_int8 n =
   let open OkafkaLib.Lsm in
-  let open OkafkaLib.Bytes in
   state (fun (bytes, pos) ->
-    ((Bytes.sub bytes pos n) |> read_int8 |> Int8.to_int, (bytes, pos + n)))
+    (Bytes.sub bytes pos 8 |> read_int64, (bytes, pos + 8)))
 
 let read_int8 =
-  read_int8 1
+  let open OkafkaLib.Lsm in
+  state (fun (bytes, pos) ->
+    ((Bytes.sub bytes pos 1) |> read_int8 |> Int8.to_int, (bytes, pos + 1)))
 
 let read_data length =
   let open OkafkaLib.Lsm in
