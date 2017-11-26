@@ -11,7 +11,7 @@ let req_header_to_bytes header =
     write_2_bytes api_version;
     write_4_bytes correlation_id;
     write_2_bytes client_id_length;
-    client_id
+    (Bytes.of_string client_id)
   ]
 
 let to_message_set records =
@@ -24,7 +24,7 @@ let to_message_set records =
         write_4_bytes (Bytes.length key); key; (* key size and key *)
         write_4_bytes (Bytes.length value); value (* value size and value *)] in
       let message_with_crc = to_buffer [
-        write_4_bytes (Int32.to_int (Int32.of_int32 (Crc.Crc32.string message 0 (String.length message))));
+        write_4_bytes (Int32.to_int (Int32.of_int32 (Crc.Crc32.string (Bytes.to_string message) 0 (Bytes.length message))));
         message] in
       to_buffer [
         write_8_bytes (Int64.of_int (-1)); (* offset *)
@@ -57,7 +57,7 @@ let produce_req_to_bytes req =
     write_4_bytes timeout;
     write_4_bytes 1; (* length of [topic_data] *)
     write_2_bytes topic_length;
-    topic;
+    (Bytes.of_string topic);
     write_4_bytes partition_data_size;
     to_buffer partition_data
   ] in
@@ -77,7 +77,7 @@ let fetch_req_to_bytes req =
     write_4_bytes 0; (* min_bytes *)
     write_4_bytes 1; (* length of [topics] *)
     write_2_bytes topic_length;
-    topic;
+    (Bytes.of_string topic);
     write_4_bytes 1; (* length of [partitions] *)
     write_4_bytes partition;
     write_8_bytes offset;
@@ -96,7 +96,7 @@ let metadata_req_to_bytes req =
     req_header_to_bytes header;
     write_4_bytes 1; (* length of [topic] *)
     write_2_bytes topic_length;
-    topic
+    (Bytes.of_string topic)
   ] in
   to_buffer [
     write_4_bytes (Bytes.length req);

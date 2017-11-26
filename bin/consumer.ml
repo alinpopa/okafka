@@ -30,14 +30,14 @@ let send_req (reader, writer) (req : Req.Fetch.t) =
   let open Proto in
   let (client_id, partition) = (req.header.client_id, req.partition) in
   let buff = Encoder.encode (Req.Fetch req) in
-  Lwt_io.write writer buff >>=
+  Lwt_io.write writer (Bytes.to_string buff) >>=
   fun _ -> Decoder.parse_fetch_resp reader >>=
   fun ({Resp.Fetch.correlation_id; topic; error_code} as resp) ->
   if error_code = 3 || error_code = 6 then
     let buff_meta =
       let req = Req.Metadata.create topic in
       Encoder.encode (Req.Metadata req) in
-    Lwt_io.write writer buff_meta >>=
+    Lwt_io.write writer (Bytes.to_string buff_meta) >>=
     fun _ -> Decoder.parse_metadata_resp reader >|=
     fun ({Resp.Metadata.correlation_id; brokers; leaders}) ->
       Retry (req, get_broker partition brokers leaders)

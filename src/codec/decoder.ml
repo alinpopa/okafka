@@ -8,7 +8,9 @@ let read_bytes ic length =
       Lwt.return acc
     else
       Lwt_io.read ~count:length ic >>=
-      fun bytes -> read_bytes ic (length - (Bytes.length bytes)) (Bytes.cat acc bytes) in
+      fun bytes ->
+        let x = Bytes.cat acc (Bytes.of_string bytes) in
+        read_bytes ic (length - (String.length bytes)) x in
   read_bytes ic length Bytes.empty
 
 let with_acc acc value =
@@ -54,6 +56,7 @@ let decode_metadata_resp bytes =
           read_int16 >>= fun host_length ->
           read_data host_length >>= fun host ->
           read_int32 >>= fun port ->
+          let host = Bytes.to_string host in
           brokers (n - 1) ({node_id; host; port} :: acc) in
       brokers brokers_size [] >>= fun brokers ->
     (*modify (fun (x, i) -> (x, i + 4)) >>> fun _ ->*)
@@ -97,6 +100,7 @@ let decode_produce_resp bytes =
     read_int32 >>= fun partition ->
     read_int16 >>= fun error_code ->
     read_int64 >>= fun offset ->
+    let topic = Bytes.to_string topic in
     let topic_response = {topic; partition; offset} in
     return (Resp.({
       Produce.correlation_id;
@@ -135,6 +139,7 @@ let decode_fetch_resp bytes =
           get >>= fun (_, end_pos) ->
           collect_records (n - (end_pos - start_pos)) ((offset, {key; value}) :: acc) in
       collect_records record_set_length [] >>= fun data ->
+      let topic = Bytes.to_string topic in
       return (Resp.({
         Fetch.correlation_id;
         topic;
@@ -146,15 +151,15 @@ let decode_fetch_resp bytes =
 
 let parse_metadata_resp ic =
   let open Lwt in
-  Lwt_io.read ~count:4 ic >|= read_int32_to_int >>=
+  Lwt_io.read ~count:4 ic >|= Bytes.of_string >|= read_int32_to_int >>=
   read_bytes ic >|= decode_metadata_resp
 
 let parse_produce_resp ic =
   let open Lwt in
-  Lwt_io.read ~count:4 ic >|= read_int32_to_int >>=
+  Lwt_io.read ~count:4 ic >|= Bytes.of_string >|= read_int32_to_int >>=
   read_bytes ic >|= decode_produce_resp
 
 let parse_fetch_resp ic =
   let open Lwt in
-  Lwt_io.read ~count:4 ic >|= read_int32_to_int >>=
+  Lwt_io.read ~count:4 ic >|= Bytes.of_string >|= read_int32_to_int >>=
   read_bytes ic >|= decode_fetch_resp

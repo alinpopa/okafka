@@ -26,7 +26,7 @@ let send_meta_req writer reader topic =
   let buff_meta =
     let req = Req.Metadata.create topic in
     Encoder.encode (Req.Metadata req) in
-  Lwt_io.write writer buff_meta >>=
+  Lwt_io.write writer (Bytes.to_string buff_meta) >>=
   fun _ -> Decoder.parse_metadata_resp reader
 
 let rec reconnect (host, port) topic partition init =
@@ -56,7 +56,7 @@ let create (host, port) topic partition =
 let send_req reader writer (req : Req.Produce.t) partition =
   let open Lwt in
   let buff = Encoder.encode (Req.Produce req) in
-  Lwt_io.write writer buff >>=
+  Lwt_io.write writer (Bytes.to_string buff) >>=
   fun _ -> Decoder.parse_produce_resp reader >>=
   fun ({Resp.Produce.topic_response; error_code} as resp) ->
   if error_code = 3 || error_code = 6 then

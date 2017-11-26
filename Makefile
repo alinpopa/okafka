@@ -1,4 +1,5 @@
 .PHONY: clean build utop main consumer producer
+.PHONY: opam-deps
 
 all: build main consumer producer
 
@@ -21,3 +22,12 @@ producer: build
 
 utop:
 	jbuilder exec utop
+
+opam-deps:
+	opam install \
+		jbuilder \
+		lwt \
+		crc \
+		conduit \
+		conduit-lwt-unix \
+		core
