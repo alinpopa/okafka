@@ -1,5 +1,0 @@
-(library
-  ((name okafkaProto)
-   (public_name okafka.proto)
-   (flags (:standard -warn-error A))
-   (libraries (okafka.lib crc))))

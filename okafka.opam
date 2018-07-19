@@ -11,14 +11,15 @@ available: [
   ocaml-version >= "4.04.0"
 ]
 build: [
-  ["jbuilder" "build" "-p" "okafka" "." "-j" jobs "@install"]
+  ["dune" "build" "-p" "okafka" "." "-j" jobs "@install"]
 ]
 depends: [
-  "jbuilder" {build & >= "1.0+beta10"}
+  "dune" {build & >= "1.0"}
   "core"
   "crc"
   "stdint"
   "lwt"
+  "lwt.unix"
   "conduit"
   "conduit-lwt-unix"
 ]

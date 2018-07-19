@@ -1,0 +1,5 @@
+(library
+  (name okafkaLib)
+  (public_name okafka.lib)
+  (flags (:standard -warn-error A))
+  (libraries stdint lwt lwt.unix))

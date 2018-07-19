@@ -27,5 +27,3 @@ module Metadata : sig
   }
   val get_broker : partition -> broker list -> partition_metadata list -> broker
 end
-
-type t

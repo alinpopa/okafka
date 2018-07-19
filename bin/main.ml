@@ -1,7 +1,6 @@
-open Lwt
-open OkafkaLib.Bytes
-open OkafkaLib.Lib
-open Stdint
+(*open Lwt*)
+(*open OkafkaLib.Bytes*)
+(*open Stdint*)
 
 let () =
   Lwt_main.run (

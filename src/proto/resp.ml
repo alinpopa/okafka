@@ -27,12 +27,7 @@ module Metadata = struct
   }
 
   let get_broker part brokers leaders =
-    let {leader} = List.find (fun {partition} -> partition = part) leaders in
-    let {node_id; host; port} = List.find (fun {node_id} -> node_id = leader) brokers in
+    let {leader; _} = List.find (fun {partition; _} -> partition = part) leaders in
+    let {node_id; host; port; _} = List.find (fun {node_id; _} -> node_id = leader) brokers in
     {node_id; host; port}
 end
-
-type t =
-  | Produce of Produce.t
-  | Fetch of Fetch.t
-  | Metadata of Metadata.t

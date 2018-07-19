@@ -20,7 +20,7 @@ let get =
     (s, s)
 
 let put x =
-  fun s ->
+  fun _ ->
     ((), x)
 
 let modify f =

@@ -13,8 +13,8 @@ let read_bytes ic length =
         read_bytes ic (length - (String.length bytes)) x in
   read_bytes ic length Bytes.empty
 
-let with_acc acc value =
-  (acc, value)
+(*let with_acc acc value =*)
+(*  (acc, value)*)
 
 let read_int32 =
   let open OkafkaLib.Lsm in
@@ -128,10 +128,10 @@ let decode_fetch_resp bytes =
         else
           get >>= fun (_, start_pos) ->
           read_int64 >>= fun offset ->
-          read_int32 >>= fun message_size ->
-          read_int32 >>= fun crc ->
-          read_int8 >>= fun magic_byte ->
-          read_int8 >>= fun attr ->
+          read_int32 >>= fun _message_size ->
+          read_int32 >>= fun _crc ->
+          read_int8 >>= fun _magic_byte ->
+          read_int8 >>= fun _attr ->
           read_int32 >>= fun key_length ->
           read_data key_length >>= fun key ->
           read_int32 >>= fun val_length ->

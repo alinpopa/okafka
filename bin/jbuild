@@ -1,4 +1,0 @@
-(executables
- ((names (main consumer producer))
-  (flags (:standard -warn-error A))
-  (libraries (okafka))))

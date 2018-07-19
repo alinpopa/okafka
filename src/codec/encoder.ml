@@ -2,7 +2,7 @@ open OkafkaLib.Bytes
 open OkafkaProto
 
 let req_header_to_bytes header =
-  let open Stdint in
+  (*let open Stdint in*)
   let open Proto in
   let {api_key; api_version; correlation_id; client_id} = header in
   let client_id_length = String.length header.client_id in
@@ -44,7 +44,7 @@ let to_partition_data partition_data =
   ) partition_data
 
 let produce_req_to_bytes req =
-  let open Stdint in
+  (*let open Stdint in*)
   let open Proto in
   let {Req.Produce.header; acks; timeout; topic_data} = req in
   let {topic; partitions_data} = topic_data in
@@ -67,7 +67,7 @@ let produce_req_to_bytes req =
   ]
 
 let fetch_req_to_bytes req =
-  let open Stdint in
+  (*let open Stdint in*)
   let {Req.Fetch.header; topic; partition; offset} = req in
   let topic_length = String.length topic in
   let req = to_buffer [
@@ -89,7 +89,7 @@ let fetch_req_to_bytes req =
   ]
 
 let metadata_req_to_bytes req =
-  let open Stdint in
+  (*let open Stdint in*)
   let {Req.Metadata.header; topic} = req in
   let topic_length = String.length topic in
   let req = to_buffer [

@@ -36,8 +36,8 @@ let rec reconnect (host, port) topic partition init =
     fun ((ic, oc) as conn) ->
       if init = true then
         send_meta_req oc ic topic >>=
-        fun ({Resp.Metadata.brokers; leaders}) ->
-          let {Proto.host; port} = Resp.Metadata.get_broker partition brokers leaders in
+        fun ({Resp.Metadata.brokers; leaders; _}) ->
+          let {Proto.host; port; _} = Resp.Metadata.get_broker partition brokers leaders in
           Conn.close conn >>=
           fun _ -> reconnect (host, port) topic partition false
       else
@@ -50,7 +50,7 @@ let rec reconnect (host, port) topic partition init =
   try_with (fun _ -> connect host port) >>= maybe_fail_with_log
 
 let create (host, port) topic partition =
-  let open Lwt in
+  (*let open Lwt in*)
   reconnect (host, port) topic partition true
 
 let send_req reader writer (req : Req.Produce.t) partition =
@@ -58,10 +58,10 @@ let send_req reader writer (req : Req.Produce.t) partition =
   let buff = Encoder.encode (Req.Produce req) in
   Lwt_io.write writer (Bytes.to_string buff) >>=
   fun _ -> Decoder.parse_produce_resp reader >>=
-  fun ({Resp.Produce.topic_response; error_code} as resp) ->
+  fun ({Resp.Produce.topic_response; error_code; _} as resp) ->
   if error_code = 3 || error_code = 6 then
     send_meta_req writer reader topic_response.topic >|=
-    fun ({Resp.Metadata.correlation_id; brokers; leaders}) ->
+    fun ({brokers; leaders; _}) ->
       Proto.Retry (req, Resp.Metadata.get_broker partition brokers leaders)
   else
     Lwt.return (Proto.Just resp)
@@ -74,13 +74,13 @@ let send ~producer ~msg =
       let req = Req.Produce.create topic partition msg in
       send_req ic oc req partition >>=
       function
-        | Just ({Resp.Produce.error_code}) ->
+        | Just ({Resp.Produce.error_code; _}) ->
             if reconnected = true then
               Lwt.return (Reconnected (producer, (error_code, error_code)))
             else
               Lwt.return (Response (error_code, error_code))
-        | Retry (req, {host; port}) ->
+        | Retry (_req, {host; port; _}) ->
             send (reconnect (host, port) topic partition false) true
-        | Failed err ->
+        | Failed _err ->
             Lwt.return (Response (0, 0)) in
   send producer false

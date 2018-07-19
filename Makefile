@@ -9,24 +9,25 @@ clean:
 	-rm -rf *.install
 
 build:
-	jbuilder build --only-packages=okafka @install
+	dune build --only-packages=okafka @install
 
 main: build
-	jbuilder build bin/main.exe
+	dune build bin/main.exe
 
 consumer: build
-	jbuilder build bin/consumer.exe
+	dune build bin/consumer.exe
 
 producer: build
-	jbuilder build bin/producer.exe
+	dune build bin/producer.exe
 
 utop:
-	jbuilder exec utop
+	dune exec utop
 
 opam-deps:
 	opam install \
-		jbuilder \
+		dune \
 		lwt \
+		lwt.unix \
 		crc \
 		conduit \
 		conduit-lwt-unix \
