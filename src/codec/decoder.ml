@@ -40,7 +40,10 @@ let read_int8 =
 let read_data length =
   let open OkafkaLib.Lsm in
   state (fun (bytes, pos) ->
-    (Bytes.sub bytes pos length, (bytes, pos + length)))
+    match length with
+    | -1 -> (Bytes.sub bytes pos 0, (bytes, pos))
+    | _ -> (Bytes.sub bytes pos length, (bytes, pos + length))
+  )
 
 let decode_metadata_resp bytes =
   let open Proto in
